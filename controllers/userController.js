@@ -2550,110 +2550,110 @@ const updateUserName = async (req, res) => {
   }
 };
 
-const createProduct = async (req, res) => {
-  try {
-    const { userId, title, description, images, type } = req.body;
+// const createProduct = async (req, res) => {
+//   try {
+//     const { userId, title, description, images, type } = req.body;
 
-    const totalProducts = await sequelize.query(
-      'SELECT COUNT(*) as total FROM add_new_productservice WHERE user_id = ?',
-      {
-        replacements: [userId],
-        type: QueryTypes.SELECT
-      }
-    );
+//     const totalProducts = await sequelize.query(
+//       'SELECT COUNT(*) as total FROM add_new_productservice WHERE user_id = ?',
+//       {
+//         replacements: [userId],
+//         type: QueryTypes.SELECT
+//       }
+//     );
 
-    const userPlan = await sequelize.query(
-      'SELECT subscriptionPlan, subscriptionEndDate FROM register WHERE id = ?',
-      {
-        replacements: [userId],
-        type: QueryTypes.SELECT
-      }
-    );
+//     const userPlan = await sequelize.query(
+//       'SELECT subscriptionPlan, subscriptionEndDate FROM register WHERE id = ?',
+//       {
+//         replacements: [userId],
+//         type: QueryTypes.SELECT
+//       }
+//     );
 
-    if (userPlan.length === 0) {
-      return res.status(404).json({ error: true, message: 'User not found' });
-    }
+//     if (userPlan.length === 0) {
+//       return res.status(404).json({ error: true, message: 'User not found' });
+//     }
 
-    const subscriptionEndDate = new Date(userPlan[0].subscriptionEndDate);
-    const currentDate = new Date();
+//     const subscriptionEndDate = new Date(userPlan[0].subscriptionEndDate);
+//     const currentDate = new Date();
 
-    // Check if the subscription is expired
-    if (currentDate > subscriptionEndDate) {
-      res.status(400).json({ error: true, message: 'Subscription is expired', isExpired: true });
-    } else {
-      if(userPlan[0].subscriptionPlan == "Silver"){
-        if(totalProducts[0].total < 5){
-          const result = await sequelize.query(
-            'INSERT INTO add_new_productservice (user_id,Title,Description, Type) VALUES (?,?,?,?)',
-            {
-              replacements: [userId, title, description, type],
-              type: QueryTypes.INSERT
-            }
-          );
+//     // Check if the subscription is expired
+//     if (currentDate > subscriptionEndDate) {
+//       res.status(400).json({ error: true, message: 'Subscription is expired', isExpired: true });
+//     } else {
+//       if(userPlan[0].subscriptionPlan == "Silver"){
+//         if(totalProducts[0].total < 5){
+//           const result = await sequelize.query(
+//             'INSERT INTO add_new_productservice (user_id,Title,Description, Type) VALUES (?,?,?,?)',
+//             {
+//               replacements: [userId, title, description, type],
+//               type: QueryTypes.INSERT
+//             }
+//           );
       
-          if (result && result[0] != null) {
-            const reqId = result[0];
-            if (Array.isArray(images)) {
+//           if (result && result[0] != null) {
+//             const reqId = result[0];
+//             if (Array.isArray(images)) {
       
-              for (let index = 0; index < images.length; index++) {
-                const data = images[index];
-                await sequelize.query(
-                  'INSERT INTO productservice_photo (	productservice_id, photo) VALUES (?, ?)',
-                  {
-                    replacements: [reqId, data],
-                    type: QueryTypes.INSERT
-                  }
-                );
-              }
+//               for (let index = 0; index < images.length; index++) {
+//                 const data = images[index];
+//                 await sequelize.query(
+//                   'INSERT INTO productservice_photo (	productservice_id, photo) VALUES (?, ?)',
+//                   {
+//                     replacements: [reqId, data],
+//                     type: QueryTypes.INSERT
+//                   }
+//                 );
+//               }
       
-              res.status(200).json({ message: 'product created!', error: false });
-            }
-          } else {
-            res.status(400).json({ message: 'Data not inserted', error: true });
-          }
-        } else {
-          res.status(400).json({ error: true, message: 'Your Plan Limit Has Reached' });
-        }
-      } else {
-        if(totalProducts[0].total < 25){
-          const result = await sequelize.query(
-            'INSERT INTO add_new_productservice (user_id,Title,Description, Type) VALUES (?,?,?,?)',
-            {
-              replacements: [userId, title, description, type],
-              type: QueryTypes.INSERT
-            }
-          );
+//               res.status(200).json({ message: 'product created!', error: false });
+//             }
+//           } else {
+//             res.status(400).json({ message: 'Data not inserted', error: true });
+//           }
+//         } else {
+//           res.status(400).json({ error: true, message: 'Your Plan Limit Has Reached' });
+//         }
+//       } else {
+//         if(totalProducts[0].total < 25){
+//           const result = await sequelize.query(
+//             'INSERT INTO add_new_productservice (user_id,Title,Description, Type) VALUES (?,?,?,?)',
+//             {
+//               replacements: [userId, title, description, type],
+//               type: QueryTypes.INSERT
+//             }
+//           );
       
-          if (result && result[0] != null) {
-            const reqId = result[0];
-            if (Array.isArray(images)) {
+//           if (result && result[0] != null) {
+//             const reqId = result[0];
+//             if (Array.isArray(images)) {
       
-              for (let index = 0; index < images.length; index++) {
-                const data = images[index];
-                await sequelize.query(
-                  'INSERT INTO productservice_photo (	productservice_id, photo) VALUES (?, ?)',
-                  {
-                    replacements: [reqId, data],
-                    type: QueryTypes.INSERT
-                  }
-                );
-              }
+//               for (let index = 0; index < images.length; index++) {
+//                 const data = images[index];
+//                 await sequelize.query(
+//                   'INSERT INTO productservice_photo (	productservice_id, photo) VALUES (?, ?)',
+//                   {
+//                     replacements: [reqId, data],
+//                     type: QueryTypes.INSERT
+//                   }
+//                 );
+//               }
       
-              res.status(200).json({ message: 'product created!', error: false });
-            }
-          } else {
-            res.status(400).json({ message: 'Data not inserted', error: true });
-          }
-        } else {
-          res.status(400).json({ error: true, message: 'Your Plan Limit Has Reached' });
-        }
-      }
-    }
-  } catch (error) {
-    console.error('Error creating product:', error);
-    res.status(500).json({ message: 'Internal server error', error: true });
-  }
-};
+//               res.status(200).json({ message: 'product created!', error: false });
+//             }
+//           } else {
+//             res.status(400).json({ message: 'Data not inserted', error: true });
+//           }
+//         } else {
+//           res.status(400).json({ error: true, message: 'Your Plan Limit Has Reached' });
+//         }
+//       }
+//     }
+//   } catch (error) {
+//     console.error('Error creating product:', error);
+//     res.status(500).json({ message: 'Internal server error', error: true });
+//   }
+// };
 
 const updateProductService = async (req, res) => {
   try {
@@ -3074,6 +3074,65 @@ const getAllBrand = async (req, res) => {
   }
 };
 
+
+const createProduct = async (req, res) => {
+  try {
+    const { name, category_id, sub_category_id,brand_id,description_short,description_long,main_price,discount_price,quantity,sku,tax_value,tags,age, images } = req.body;
+    const result = await sequelize.query(
+      'INSERT INTO products (name,category_id,sub_category_id, brand_id,description_short,description_long,main_price,discount_price,quantity,sku,tax_value,tags,age,status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+      {
+        replacements: [name, category_id, sub_category_id,brand_id,description_short,description_long,main_price,discount_price,quantity,sku,tax_value,tags,age, "0"],
+        type: QueryTypes.INSERT
+      }
+    );
+
+    if (result && result[0] != null) {
+      const reqId = result[0];
+      if (Array.isArray(images)) {
+
+        for (let index = 0; index < images.length; index++) {
+          const data = images[index];
+          await sequelize.query(
+            'INSERT INTO images (image, product_id, type) VALUES (?, ?, ?)',
+            {
+              replacements: [ data, reqId, 'product'],
+              type: QueryTypes.INSERT
+            }
+          );
+        }
+
+        res.status(200).json({ message: 'Product created!', error: false });
+      }
+    } else {
+      res.status(400).json({ message: 'Data not inserted', error: true });
+    }
+  } catch (error) {
+    console.error('Error creating Product:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
+
+
+const getProduct = async (req, res) => {
+  try {
+    const result = await sequelize.query(
+      'SELECT * FROM products',
+      {
+        type: QueryTypes.SELECT
+      }
+    );
+
+    if (result.length > 0) {
+      res.status(200).json({ subcategories: result, error: false });
+    } else {
+      res.status(404).json({ message: 'No products found', error: true });
+    }
+  } catch (error) {
+    console.error('Error fetching subcategories:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
+
 module.exports = {
   registerUser,
   getMessagesSenderRoom,
@@ -3084,6 +3143,7 @@ module.exports = {
   getAllCategories,
   createSubCategory,
   fetchSubCategories,
+  getProduct,
   sendMessageRoom,
   sendMessage,
   getMessages,
