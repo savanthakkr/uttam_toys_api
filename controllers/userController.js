@@ -2838,8 +2838,20 @@ const registerUser = async (req, res) => {
       }
     );
 
+    const existingEmail = await sequelize.query(
+      'SELECT * FROM register WHERE email = ?',
+      {
+        replacements: [email],
+        type: QueryTypes.SELECT
+      }
+    );
+
     if (existingUser.length > 0) {
       return res.status(400).json({ error: true, message: 'Mobile number already registered' });
+    }
+
+    if (existingEmail.length > 0) {
+      return res.status(400).json({ error: true, message: 'Email address already registered' });
     }
 
     // Hash the password before storing
@@ -2866,12 +2878,46 @@ const registerUser = async (req, res) => {
   }
 };
 
+const UserLogin = async (req, res) => {
+  try {
+    const { phone_number, password } = req.body;
+
+    // Query to find the user by phone_number
+    const [existingUser] = await sequelize.query('SELECT * FROM register WHERE email = ?',
+      { replacements: [phone_number], type: QueryTypes.SELECT });
+
+    if (existingUser) {
+      const user = existingUser;
+
+      // Compare the provided password with the hashed password in the database
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+
+      if (isPasswordValid) {
+        const token = generateToken(user);
+        const userId = user.id;
+
+        return res.status(200).send({ error: false, message: 'Login success!', token: token, userId: userId });
+      } else {
+        return res.status(401).send({ error: true, message: 'Invalid credentials' });
+      }
+    } else {
+      return res.status(404).send({ error: true, message: 'User not found' });
+    }
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({
+      message: 'Error in login check api!',
+      error
+    });
+  }
+};
+
 
 const loginUser = async (req, res) => {
   try {
     const { phone_number } = req.body;
 
-    const [existingUser] = await sequelize.query('SELECT * FROM register WHERE phone_number = ? AND password = ?',
+    const [existingUser] = await sequelize.query('SELECT * FROM register WHERE phone_number = ?',
       { replacements: [phone_number], type: QueryTypes.SELECT });
 
 
@@ -2881,10 +2927,8 @@ const loginUser = async (req, res) => {
 
       const token = generateToken(user);
       const userId = user.id;
-      const type = user.type;
-      const status = user.status;
 
-      return res.status(200).send({ error: false, message: 'Login success!', token: token, userId: userId, type: type, status: status });
+      return res.status(200).send({ error: false, message: 'Login success!', token: token, userId: userId});
     } else {
       return res.status(404).send({ error: true, message: 'Mobile Number not found! Sign up!' });
     }
@@ -2897,6 +2941,23 @@ const loginUser = async (req, res) => {
   }
 };
 
+const getHomeData = async (req, res) => {
+  try {
+    // const userId = req.user.id;
+    const { userId } = req.body;
+    const users = await sequelize.query(
+      'SELECT * FROM ads_photo WHERE user_id = ?',
+      {
+        replacements: [userId],
+        type: QueryTypes.SELECT
+      }
+    );
+    res.status(200).json({ error: false, message: "User Story Fetch", UserStory: users });
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ messsage: 'Internal server error', error: true });
+  }
+};
 
 
 const createCategory = async (req, res) => {
@@ -3133,11 +3194,35 @@ const getProduct = async (req, res) => {
   }
 };
 
+
+const getSubCategories = async (req, res) => {
+  const {  title } = req.body;
+  try {
+    const result = await sequelize.query(
+      'SELECT * FROM subcategories WHERE categoryName = ?',
+      {
+        replacements: [title],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    if (result.length > 0) {
+      res.status(200).json({ subcategories: result, error: false });
+    } else {
+      res.status(404).json({ message: 'No subcategories found', error: true });
+    }
+  } catch (error) {
+    console.error('Error fetching subcategories:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
+
 module.exports = {
   registerUser,
   getMessagesSenderRoom,
   createAge,
   createBarand,
+  getSubCategories,
   getAllAge,
   getAllBrand,
   getAllCategories,
@@ -3154,6 +3239,7 @@ module.exports = {
   updateUserPersonalProfile,
   updateUserName,
   loginUser,
+  UserLogin,
   getAllUsersIfFollow,
   deleteImageProductService,
   updateRequirement,

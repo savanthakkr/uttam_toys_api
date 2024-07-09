@@ -4,10 +4,11 @@ const userController = require('../controllers/userController');
 const { verifyToken } = require("../middlewares/roleMiddleware");
 
 const {createAge,
+    getSubCategories,
     createBarand,
     getAllAge,
     getAllBrand,
-    getProduct,
+    getProduct,UserLogin,
     fetchSubCategories,createSubCategory,getAllCategories,createCategory, deleteImageProductService ,deleteImage ,updateProductService, updateRequirement,updateUserName, updateGroupName, updateUserPersonalProfile, getUserPlan, verifyBusinessProfile, verifyStory, fetchTopUsersWithCompletedRequirements, fetchUsersTotalCountAll, updateUserSubscription,getUserStory,createStory,fetchUserProfile, fetchUserRequirementsLetter, fetchUsersForAdminPersonal, getSavedRequirements, markMessagesAsSeen, updateUserToken,
     getUserToken,getUserStorybyId,
     getRoomUserToken,fetchRequirementDetails,fetchUserRequirements, fetchUsersForAdmin, loginUserAdmin, getClickSellIt,saveRequirement,clickSellIt, getMessages, sendMessage, registerUser,updateUserProfile, loginUser,updateUserType,createUserProfile,createBusinessProfile,sendMessageRoom,getMessagesSenderRoom,getMessagesRoom, findRoomByUserId, getUserProfile, getImage, OTPVerify,createRoom, sendPasswordOTP, OTPVerifyEmail, updatepassword,createRequirement,
@@ -18,6 +19,7 @@ const {createAge,
 
 router.post('/users/loginUserAdmin', loginUserAdmin);
 router.post('/users/createAge', createAge);
+router.post('/users/getSubCategories', getSubCategories);
 router.post('/users/createBarand', createBarand);
 router.get('/users/getAllAge', getAllAge);
 router.get('/users/getAllBrand', getAllBrand);
@@ -71,6 +73,7 @@ router.post('/users/otp', OTPVerify);
 
 // Login
 router.post('/users/login', loginUser);
+router.post('/users/userlogin', UserLogin);
 
 router.post('/users/updateType', updateUserType);
 router.post('/users/createProfile', createUserProfile);
