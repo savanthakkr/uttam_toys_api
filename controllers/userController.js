@@ -2943,19 +2943,53 @@ const loginUser = async (req, res) => {
 
 const getHomeData = async (req, res) => {
   try {
-    // const userId = req.user.id;
-    const { userId } = req.body;
-    const users = await sequelize.query(
-      'SELECT * FROM ads_photo WHERE user_id = ?',
+    // Fetch categories
+    const category = await sequelize.query(
+      'SELECT * FROM categories WHERE status = ?',
       {
-        replacements: [userId],
+        replacements: ["0"],
         type: QueryTypes.SELECT
       }
     );
-    res.status(200).json({ error: false, message: "User Story Fetch", UserStory: users });
+
+    // Fetch products
+    const products = await sequelize.query(
+      'SELECT * FROM products WHERE status = ? LIMIT 20',
+      {
+        replacements: ["0"],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    // Fetch images for each product
+    for (const product of products) {
+      const images = await sequelize.query(
+        'SELECT image FROM images WHERE product_id = ? AND type = ?',
+        {
+          replacements: [product.id, "product"],
+          type: QueryTypes.SELECT
+        }
+      );
+
+      // Debugging: Log the results
+      console.log(`Product ID: ${product.id}, Images: `, images);
+
+      // Map the images to the product
+      product.images = images.map(img => img.image); // Use the correct field name
+    }
+
+    // Return the data
+    res.status(200).json({
+      error: false,
+      message: "Data Fetch",
+      Category: category,
+      FeaturedProduct: products,
+      TrendingProduct: products,
+      BestSellingProduct: products
+    });
   } catch (error) {
-    console.error('Error fetching user profile:', error);
-    res.status(500).json({ messsage: 'Internal server error', error: true });
+    console.error('Error fetching home data:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
   }
 };
 
@@ -3294,5 +3328,6 @@ module.exports = {
   getUserPlan,
   verifyBusinessProfile,
   verifyStory,
-  getUserStorybyId
+  getUserStorybyId,
+  getHomeData
 };
