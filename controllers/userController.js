@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const verifyToken = require('../middlewares/authMiddleware');
 const fs = require('fs');
 const path = require('path');
+const puppeteer = require('puppeteer');
 
 const otpGenerator = require('otp-generator');
 const nodemailer = require('nodemailer');
@@ -2993,6 +2994,79 @@ const getHomeData = async (req, res) => {
   }
 };
 
+const getProductBySubCategory = async (req, res) => {
+  try {
+    const { subCategory } = req.body;
+    // Fetch products
+    const products = await sequelize.query(
+      'SELECT * FROM products WHERE sub_category_id = ? AND status = ?',
+      {
+        replacements: [subCategory,"0"],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    // Fetch images for each product
+    for (const product of products) {
+      const images = await sequelize.query(
+        'SELECT image FROM images WHERE product_id = ? AND type = ?',
+        {
+          replacements: [product.id, "product"],
+          type: QueryTypes.SELECT
+        }
+      );
+      // Map the images to the product
+      product.images = images.map(img => img.image); // Use the correct field name
+    }
+
+    // Return the data
+    res.status(200).json({
+      error: false,
+      message: "Data Fetch",
+      AllProducts: products,
+    });
+  } catch (error) {
+    console.error('Error fetching home data:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
+
+const getProductDetails = async (req, res) => {
+  try {
+    const { productId } = req.body;
+    // Fetch products
+    const products = await sequelize.query(
+      'SELECT * FROM products WHERE id = ? AND status = ?',
+      {
+        replacements: [productId,"0"],
+        type: QueryTypes.SELECT
+      }
+    );
+
+    // Fetch images for each product
+    for (const product of products) {
+      const images = await sequelize.query(
+        'SELECT image FROM images WHERE product_id = ? AND type = ?',
+        {
+          replacements: [product.id, "product"],
+          type: QueryTypes.SELECT
+        }
+      );
+      // Map the images to the product
+      product.images = images.map(img => img.image); // Use the correct field name
+    }
+
+    // Return the data
+    res.status(200).json({
+      error: false,
+      message: "Data Fetch",
+      ProductDetails: products,
+    });
+  } catch (error) {
+    console.error('Error fetching home data:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
 
 const createCategory = async (req, res) => {
   try {
@@ -3251,6 +3325,61 @@ const getSubCategories = async (req, res) => {
   }
 };
 
+const fetchProductDetails = async (req, res) => {
+  try {
+    const { url } = req.body;
+
+    if (!url) {
+      return res.status(400).json({ message: 'URL is required', error: true });
+    }
+
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
+    await page.goto(url, { waitUntil: 'networkidle2' });
+
+    const title = await page.$eval('#productTitle', el => el.textContent.trim());
+
+    // Try different selectors for the price element
+    const priceSelectors = ['#priceblock_ourprice', '#priceblock_dealprice', '.a-price .a-offscreen'];
+    let price = null;
+
+    for (let selector of priceSelectors) {
+      try {
+        price = await page.$eval(selector, el => el.textContent.trim());
+        if (price) break;
+      } catch (error) {
+        // Continue to the next selector if the current one fails
+      }
+    }
+
+    const description = await page.$eval('#feature-bullets ul', el => el.textContent.trim());
+
+    const technicalDetails = await page.$eval('#productDetails_techSpec_section_1', el => el.innerText.trim());
+
+    const images = await page.$$eval('#altImages img', imgs => imgs.map(img => img.src));
+
+    await browser.close();
+
+    if (title && price && description && technicalDetails && images.length > 0) {
+      res.status(200).json({ 
+        product: { 
+          title, 
+          price, 
+          description, 
+          technicalDetails, 
+          images 
+        }, 
+        error: false 
+      });
+    } else {
+      res.status(404).json({ message: 'Product details not found', error: true });
+    }
+  } catch (error) {
+    console.error('Error fetching product details:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
+
 module.exports = {
   registerUser,
   getMessagesSenderRoom,
@@ -3319,6 +3448,7 @@ module.exports = {
   fetchUsersForAdminPersonal,
   fetchTopUsersWithCompletedRequirements,
   updateUserToken,
+  fetchProductDetails,
   getUserToken,
   updateUserSubscription,
   getUserStory,
@@ -3329,5 +3459,7 @@ module.exports = {
   verifyBusinessProfile,
   verifyStory,
   getUserStorybyId,
-  getHomeData
+  getHomeData,
+  getProductBySubCategory,
+  getProductDetails
 };

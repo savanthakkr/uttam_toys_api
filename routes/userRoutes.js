@@ -5,12 +5,13 @@ const { verifyToken } = require("../middlewares/roleMiddleware");
 
 const {createAge,
     getSubCategories,
+    fetchProductDetails,
     createBarand,
     getAllAge,
     getAllBrand,
     getProduct,UserLogin,
     fetchSubCategories,createSubCategory,getAllCategories,createCategory, deleteImageProductService ,deleteImage ,updateProductService, updateRequirement,updateUserName, updateGroupName, updateUserPersonalProfile, getUserPlan, verifyBusinessProfile, verifyStory, fetchTopUsersWithCompletedRequirements, fetchUsersTotalCountAll, updateUserSubscription,getUserStory,createStory,fetchUserProfile, fetchUserRequirementsLetter, fetchUsersForAdminPersonal, getSavedRequirements, markMessagesAsSeen, updateUserToken,
-    getUserToken,getUserStorybyId,getHomeData,
+    getUserToken,getUserStorybyId,getHomeData,getProductBySubCategory,getProductDetails,
     getRoomUserToken,fetchRequirementDetails,fetchUserRequirements, fetchUsersForAdmin, loginUserAdmin, getClickSellIt,saveRequirement,clickSellIt, getMessages, sendMessage, registerUser,updateUserProfile, loginUser,updateUserType,createUserProfile,createBusinessProfile,sendMessageRoom,getMessagesSenderRoom,getMessagesRoom, findRoomByUserId, getUserProfile, getImage, OTPVerify,createRoom, sendPasswordOTP, OTPVerifyEmail, updatepassword,createRequirement,
     getAllUsers,getAllUserRequirementsUserFollo,getAllUsersIfFollow,getAllUserRequirements,getPersonalProfile,getBusinessProfile,sendFollowRequest,getFollowRequest,updateRequestStatus,getFollowAllUsers,
     createProduct,getAllUserPrductService,deleteRequirement,updateBusinessProfile,updateRequirementStatus } = userController; 
@@ -18,6 +19,7 @@ const {createAge,
 // admin api 
 
 router.post('/users/loginUserAdmin', loginUserAdmin);
+router.post('/users/fetchProductDetails', fetchProductDetails);
 router.post('/users/createAge', createAge);
 router.post('/users/getSubCategories', getSubCategories);
 router.post('/users/createBarand', createBarand);
@@ -27,6 +29,9 @@ router.get('/users/fetchSubCategories', fetchSubCategories);
 router.get('/users/getProduct', getProduct);
 router.get('/users/getAllCategories', getAllCategories);
 router.get('/users/getHomeData', getHomeData);
+router.post('/users/getProductBySubCategory', getProductBySubCategory);
+router.post('/users/getProductDetails', getProductDetails);
+
 router.get('/users/fetchUsersForAdmin', fetchUsersForAdmin);
 router.get('/users/fetchTopUsersWithCompletedRequirements', fetchTopUsersWithCompletedRequirements);
 router.get('/users/fetchUsersTotalCountAll', fetchUsersTotalCountAll);
