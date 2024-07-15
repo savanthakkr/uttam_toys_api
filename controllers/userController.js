@@ -3,8 +3,9 @@ const { sequelize } = require('../config/database');
 const { QueryTypes } = require('sequelize');
 const jwt = require('jsonwebtoken');
 const verifyToken = require('../middlewares/authMiddleware');
-const fs = require('fs');
 const path = require('path');
+const fs = require('fs');
+const xlsx = require('xlsx');
 const puppeteer = require('puppeteer');
 
 const otpGenerator = require('otp-generator');
@@ -3337,48 +3338,69 @@ const fetchProductDetails = async (req, res) => {
     const page = await browser.newPage();
     await page.goto(url, { waitUntil: 'networkidle2' });
 
-    const title = await page.$eval('#productTitle', el => el.textContent.trim());
+    const title = await page.$eval('#productTitle', el => el.textContent.trim()).catch(() => null);
 
     // Try different selectors for the price element
     const priceSelectors = ['#priceblock_ourprice', '#priceblock_dealprice', '.a-price .a-offscreen'];
-    let price = null;
-
+    let main_price = null;
     for (let selector of priceSelectors) {
       try {
-        price = await page.$eval(selector, el => el.textContent.trim());
-        if (price) break;
+        main_price = await page.$eval(selector, el => el.textContent.trim());
+        if (main_price) break;
       } catch (error) {
-        // Continue to the next selector if the current one fails
+        main_price = null;
       }
     }
 
-    const description = await page.$eval('#feature-bullets ul', el => el.textContent.trim());
+    // Example selectors for technical details
+    const technicalDetails = {
+      dimensions: await page.$eval('#productDetails_techSpec_section_1', el => el.textContent.trim()).catch(() => null),
+      // Add more properties as needed
+    };
 
-    const technicalDetails = await page.$eval('#productDetails_techSpec_section_1', el => el.innerText.trim());
+    // Example selectors, need to be adjusted based on the actual website structure
+    const category_id = await page.$eval('#category_id', el => el.textContent.trim()).catch(() => null);
+    const sub_category_id = await page.$eval('#sub_category_id', el => el.textContent.trim()).catch(() => null);
+    const brand_id = await page.$eval('#bylineInfo', el => el.textContent.trim()).catch(() => null);
+    const description_short = await page.$eval('#productDescription p span', el => el.textContent.trim()).catch(() => null);
+    const description_long = await page.$eval('#feature-bullets', el => el.textContent.trim()).catch(() => null);
+    const discount_price = await page.$eval('#discount_price', el => el.textContent.trim()).catch(() => null);
+    const sku = await page.$eval('#sku', el => el.textContent.trim()).catch(() => null);
+    const tax_value = await page.$eval('#tax_value', el => el.textContent.trim()).catch(() => null);
+    const tags = await page.$$eval('.tags', el => el.map(tag => tag.textContent.trim())).catch(() => null);
+    const age = await page.$eval('#age', el => el.textContent.trim()).catch(() => null);
 
-    const images = await page.$$eval('#altImages img', imgs => imgs.map(img => img.src));
+    const images = await page.$$eval('#altImages img', imgs => imgs.map(img => img.src)).catch(() => null);
 
     await browser.close();
 
-    if (title && price && description && technicalDetails && images.length > 0) {
-      res.status(200).json({ 
-        product: { 
-          title, 
-          price, 
-          description, 
-          technicalDetails, 
-          images 
-        }, 
-        error: false 
-      });
-    } else {
-      res.status(404).json({ message: 'Product details not found', error: true });
-    }
+    res.status(200).json({ 
+      product: { 
+        title, 
+        category_id,
+        sub_category_id,
+        brand_id,
+        description_short,
+        description_long,
+        main_price,
+        discount_price,
+        sku,
+        tax_value,
+        tags,
+        age,
+        images,
+        ...technicalDetails  // Include technical details in the response
+      }, 
+      error: false 
+    });
   } catch (error) {
     console.error('Error fetching product details:', error);
     res.status(500).json({ message: 'Internal server error', error: true });
   }
 };
+
+
+
 
 module.exports = {
   registerUser,

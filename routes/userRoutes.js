@@ -16,7 +16,6 @@ const {createAge,
     getAllUsers,getAllUserRequirementsUserFollo,getAllUsersIfFollow,getAllUserRequirements,getPersonalProfile,getBusinessProfile,sendFollowRequest,getFollowRequest,updateRequestStatus,getFollowAllUsers,
     createProduct,getAllUserPrductService,deleteRequirement,updateBusinessProfile,updateRequirementStatus } = userController; 
 
-// admin api 
 
 router.post('/users/loginUserAdmin', loginUserAdmin);
 router.post('/users/fetchProductDetails', fetchProductDetails);

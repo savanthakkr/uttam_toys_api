@@ -30,7 +30,8 @@
     "puppeteer": "^22.13.0",
     "sequelize": "^6.37.2",
     "socket.io": "^4.7.5",
-    "twilio": "^5.0.4"
+    "twilio": "^5.0.4",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "nodemon": "^3.1.3"
