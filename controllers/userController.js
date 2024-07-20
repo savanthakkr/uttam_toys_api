@@ -3,10 +3,8 @@ const { sequelize } = require('../config/database');
 const { QueryTypes } = require('sequelize');
 const jwt = require('jsonwebtoken');
 const verifyToken = require('../middlewares/authMiddleware');
-const path = require('path');
 const fs = require('fs');
-const xlsx = require('xlsx');
-const puppeteer = require('puppeteer');
+const path = require('path');
 
 const otpGenerator = require('otp-generator');
 const nodemailer = require('nodemailer');
@@ -567,58 +565,7 @@ const getAllUserRequirementsUserFollo = async (req, res) => {
 
 
 
-const saveRequirement = async (req, res) => {
-  try {
-    const { userId, requirementId, requirementUserId } = req.body;
 
-    // Check if the requirement is already saved by the user
-    const existingSave = await sequelize.query(
-      'SELECT * FROM saved_requirements WHERE user_id = ? AND requirement_id = ?',
-      {
-        replacements: [userId, requirementId],
-        type: QueryTypes.SELECT
-      }
-    );
-
-    if (existingSave.length > 0) {
-      // If the requirement is already saved, delete it
-      const deleteResult = await sequelize.query(
-        'DELETE FROM saved_requirements WHERE user_id = ? AND requirement_id = ?',
-        {
-          replacements: [userId, requirementId],
-          type: QueryTypes.DELETE
-        }
-      );
-
-
-      console.log("hello");
-
-
-      // Check if rows were actually affected
-      return res.status(200).json({ message: 'Requirement unsaved successfully', error: false });
-    } else {
-      // If the requirement is not saved, insert it
-      const result = await sequelize.query(
-        'INSERT INTO saved_requirements (user_id, requirement_id, requirementUserId) VALUES (?, ?, ?)',
-        {
-          replacements: [userId, requirementId, requirementUserId],
-          type: QueryTypes.INSERT
-        }
-      );
-
-      console.log("hello saved");
-
-      if (result && result[0] !== undefined) {
-        return res.status(200).json({ message: 'Requirement saved successfully', error: false });
-      } else {
-        return res.status(400).json({ message: 'Failed to save requirement', error: true });
-      }
-    }
-  } catch (error) {
-    console.error('Error saving requirement:', error);
-    return res.status(500).json({ message: 'Internal server error', error: true });
-  }
-};
 
 const getSavedRequirements = async (req, res) => {
   try {
@@ -2945,6 +2892,8 @@ const loginUser = async (req, res) => {
 
 const getHomeData = async (req, res) => {
   try {
+    const { userId } = req.body; // Assuming userId is passed as a parameter
+
     // Fetch categories
     const category = await sequelize.query(
       'SELECT * FROM categories WHERE status = ?',
@@ -2963,8 +2912,21 @@ const getHomeData = async (req, res) => {
       }
     );
 
-    // Fetch images for each product
+    // Fetch images and check wishlist for each product
     for (const product of products) {
+      // Check if the product is in the wishlist
+      const wishlistCheck = await sequelize.query(
+        'SELECT * FROM wishlist WHERE user_id = ? AND product_id = ?',
+        {
+          replacements: [userId, product.id],
+          type: QueryTypes.SELECT
+        }
+      );
+
+      // Set isSaved property based on wishlist check
+      product.isWishlisted = wishlistCheck.length > 0;
+
+      // Fetch images for the product
       const images = await sequelize.query(
         'SELECT image FROM images WHERE product_id = ? AND type = ?',
         {
@@ -2973,17 +2935,14 @@ const getHomeData = async (req, res) => {
         }
       );
 
-      // Debugging: Log the results
-      console.log(`Product ID: ${product.id}, Images: `, images);
-
       // Map the images to the product
-      product.images = images.map(img => img.image); // Use the correct field name
+      product.images = images.map(img => img.image);
     }
 
     // Return the data
     res.status(200).json({
       error: false,
-      message: "Data Fetch",
+      message: "Data Fetched",
       Category: category,
       FeaturedProduct: products,
       TrendingProduct: products,
@@ -3068,6 +3027,110 @@ const getProductDetails = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error: true });
   }
 };
+
+const addProductCart = async (req, res) => {
+  try {
+    const {  product_id, user_id,quantity } = req.body;
+
+    const [existingUserCart] = await sequelize.query('SELECT * FROM cart WHERE product_id = ? AND user_id = ?',
+      { replacements: [product_id,user_id], type: QueryTypes.SELECT });
+
+
+    if (!existingUserCart) {
+      const result = await sequelize.query(
+        'INSERT INTO cart (product_id, user_id,quantity) VALUES (?,?,?)',
+        {
+          replacements: [product_id, user_id,quantity],
+          type: QueryTypes.INSERT
+        }
+      );
+  
+      if (result && result[0] != null) {
+        res.status(200).json({ message: 'Product added', error: false });
+      } else {
+        res.status(400).json({ message: 'Product not added', error: true });
+      }
+    } else {
+      return res.status(404).send({ error: true, message: 'Product already exist in cart!' });
+    }
+  } catch (error) {
+    console.error('Error creating Category:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
+
+const fetchCartItems = async (req, res) => {
+  try {
+    const { user_id } = req.body;
+    
+    console.log(`Fetching cart items for user_id: ${user_id}`);
+
+    const UserCartResult = await sequelize.query(
+      'SELECT * FROM cart WHERE user_id = ?',
+      { replacements: [user_id], type: QueryTypes.SELECT }
+    );
+
+    // Check if the result is an array or a single object
+    const UserCart = Array.isArray(UserCartResult) ? UserCartResult : [UserCartResult];
+
+    // Log the fetched cart items
+    console.log('UserCart:', UserCart);
+
+    if (UserCart.length === 0) {
+      return res.status(200).json({
+        error: false,
+        message: "No items in the cart",
+        CartDetails: [],
+      });
+    }
+
+    // Fetch all products in parallel
+    const productPromises = UserCart.map(async (cart) => {
+      const productResult = await sequelize.query(
+        'SELECT * FROM products WHERE id = ?',
+        {
+          replacements: [cart.product_id],
+          type: QueryTypes.SELECT
+        }
+      );
+
+      for (const product of productResult) {
+        const images = await sequelize.query(
+          'SELECT image FROM images WHERE product_id = ? AND type = ?',
+          {
+            replacements: [product.id, "product"],
+            type: QueryTypes.SELECT
+          }
+        );
+        // Map the images to the product
+        product.images = images.map(img => img.image); // Use the correct field name
+      }
+
+      // Check if the result is an array or a single object
+      const products = Array.isArray(productResult) ? productResult : [productResult];
+
+      // Log the fetched products for each cart item
+      console.log(`Products for cart item ${cart.product_id}:`, products);
+
+      cart.products = products;
+      return cart;
+    });
+
+    const updatedCart = await Promise.all(productPromises);
+
+    res.status(200).json({
+      error: false,
+      message: "Data Fetch",
+      CartDetails: updatedCart,
+    });
+  } catch (error) {
+    console.error('Error fetching cart items:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
+
+
+
 
 const createCategory = async (req, res) => {
   try {
@@ -3326,80 +3389,208 @@ const getSubCategories = async (req, res) => {
   }
 };
 
-const fetchProductDetails = async (req, res) => {
+
+const saveProduct = async (req, res) => {
   try {
-    const { url } = req.body;
+    const { userId, productId } = req.body;
 
-    if (!url) {
-      return res.status(400).json({ message: 'URL is required', error: true });
-    }
+    // Check if the requirement is already saved by the user
+    const existingSave = await sequelize.query(
+      'SELECT * FROM wishlist WHERE user_id = ? AND product_id = ?',
+      {
+        replacements: [userId, productId],
+        type: QueryTypes.SELECT
+      }
+    );
 
-    const browser = await puppeteer.launch();
-    const page = await browser.newPage();
-    await page.goto(url, { waitUntil: 'networkidle2' });
+    if (existingSave.length > 0) {
+      // If the requirement is already saved, delete it
+      const deleteResult = await sequelize.query(
+        'DELETE FROM wishlist WHERE user_id = ? AND product_id = ?',
+        {
+          replacements: [userId, productId],
+          type: QueryTypes.DELETE
+        }
+      );
 
-    const title = await page.$eval('#productTitle', el => el.textContent.trim()).catch(() => null);
 
-    // Try different selectors for the price element
-    const priceSelectors = ['#priceblock_ourprice', '#priceblock_dealprice', '.a-price .a-offscreen'];
-    let main_price = null;
-    for (let selector of priceSelectors) {
-      try {
-        main_price = await page.$eval(selector, el => el.textContent.trim());
-        if (main_price) break;
-      } catch (error) {
-        main_price = null;
+      console.log("hello");
+
+
+      // Check if rows were actually affected
+      return res.status(200).json({ message: 'product unsaved successfully', error: false });
+    } else {
+      // If the requirement is not saved, insert it
+      const result = await sequelize.query(
+        'INSERT INTO wishlist (user_id, product_id) VALUES (?, ?)',
+        {
+          replacements: [userId, productId],
+          type: QueryTypes.INSERT
+        }
+      );
+
+      if (result && result[0] !== undefined) {
+        return res.status(200).json({ message: 'product saved successfully', error: false });
+      } else {
+        return res.status(400).json({ message: 'Failed to save product', error: true });
       }
     }
-
-    // Example selectors for technical details
-    const technicalDetails = {
-      dimensions: await page.$eval('#productDetails_techSpec_section_1', el => el.textContent.trim()).catch(() => null),
-      // Add more properties as needed
-    };
-
-    // Example selectors, need to be adjusted based on the actual website structure
-    const category_id = await page.$eval('#category_id', el => el.textContent.trim()).catch(() => null);
-    const sub_category_id = await page.$eval('#sub_category_id', el => el.textContent.trim()).catch(() => null);
-    const brand_id = await page.$eval('#bylineInfo', el => el.textContent.trim()).catch(() => null);
-    const description_short = await page.$eval('#productDescription p span', el => el.textContent.trim()).catch(() => null);
-    const description_long = await page.$eval('#feature-bullets', el => el.textContent.trim()).catch(() => null);
-    const discount_price = await page.$eval('#discount_price', el => el.textContent.trim()).catch(() => null);
-    const sku = await page.$eval('#sku', el => el.textContent.trim()).catch(() => null);
-    const tax_value = await page.$eval('#tax_value', el => el.textContent.trim()).catch(() => null);
-    const tags = await page.$$eval('.tags', el => el.map(tag => tag.textContent.trim())).catch(() => null);
-    const age = await page.$eval('#age', el => el.textContent.trim()).catch(() => null);
-
-    const images = await page.$$eval('#altImages img', imgs => imgs.map(img => img.src)).catch(() => null);
-
-    await browser.close();
-
-    res.status(200).json({ 
-      product: { 
-        title, 
-        category_id,
-        sub_category_id,
-        brand_id,
-        description_short,
-        description_long,
-        main_price,
-        discount_price,
-        sku,
-        tax_value,
-        tags,
-        age,
-        images,
-        ...technicalDetails  // Include technical details in the response
-      }, 
-      error: false 
-    });
   } catch (error) {
-    console.error('Error fetching product details:', error);
-    res.status(500).json({ message: 'Internal server error', error: true });
+    console.error('Error saving product:', error);
+    return res.status(500).json({ message: 'Internal server error', error: true });
   }
 };
 
 
+
+const addUserAddress = async (req, res) => {
+  try {
+    const { address_line_1, address_line_2,state,city,pincode,landmark,user_id,type } = req.body;
+    const [existingUserAddress] = await sequelize.query('SELECT * FROM address WHERE user_id = ? AND type = ?',
+      { replacements: [user_id,type], type: QueryTypes.SELECT });
+    if (!existingUserAddress) {
+      const result = await sequelize.query(
+        'INSERT INTO address (address_line_1, address_line_2,state,city,pincode,landmark,user_id,type) VALUES (?,?,?,?,?,?,?,?)',
+        {
+          replacements: [address_line_1, address_line_2,state,city,pincode,landmark,user_id,type],
+          type: QueryTypes.INSERT
+        }
+      );
+  
+      if (result && result[0] != null) {
+        res.status(200).json({ message: 'Address added', error: false });
+      } else {
+        res.status(400).json({ message: 'Address not added', error: true });
+      }
+    } else {
+      const result = await sequelize.query(
+        'UPDATE address SET address_line_1 = ?,address_line_2 = ?,state = ?,city = ?,pincode = ?,landmark = ? WHERE user_id = ? AND type = ?',
+        {
+          replacements: [address_line_1, address_line_2,state,city,pincode,landmark,user_id,type],
+          type: QueryTypes.UPDATE
+        }
+      );
+  
+      res.status(200).json({ message: 'Address update', error: false });
+    }
+    
+  } catch (error) {
+    console.error('Error creating Category:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
+const fetchUserAddress = async (req, res) => {
+  try {
+    const { userId,type } = req.body;
+    // Fetch products
+    const address = await sequelize.query(
+      'SELECT * FROM address WHERE user_id = ? AND type = ?',
+      {
+        replacements: [userId,type],
+        type: QueryTypes.SELECT
+      }
+    );
+    // Return the data
+    res.status(200).json({
+      error: false,
+      message: "Data Fetch",
+      addressDetails: address,
+    });
+  } catch (error) {
+    console.error('Error fetching home data:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
+const fetchUserAllAddress = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    // Fetch products
+    const address = await sequelize.query(
+      'SELECT * FROM address WHERE user_id = ?',
+      {
+        replacements: [userId],
+        type: QueryTypes.SELECT
+      }
+    );
+    // Return the data
+    res.status(200).json({
+      error: false,
+      message: "Data Fetch",
+      addressDetails: address,
+    });
+  } catch (error) {
+    console.error('Error fetching home data:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
+const createOrder = async (req, res) => {
+  try {
+    const {  userId, addressId,paymentType,transactionId,amount } = req.body;
+    const result = await sequelize.query(
+      'INSERT INTO user_order (user_id, address_id,payment_type,transaction_id,amount) VALUES (?,?,?,?,?)',
+      {
+        replacements: [userId, addressId,paymentType,transactionId,amount],
+        type: QueryTypes.INSERT
+      }
+    );
+    console.log(req.body);
+    console.log(result[0]);
+    if (result && result[0] != null) {
+      const insertedId = result[0];
+      const resultUpdate = await sequelize.query(
+        'UPDATE cart SET order_id = ?,status = ? WHERE user_id = ? AND status = ?',
+        {
+          replacements: [insertedId, '0',userId,'1'],
+          type: QueryTypes.UPDATE
+        }
+      );
+  
+      res.status(200).json({ message: 'Order created!', error: false });
+    } else {
+      res.status(400).json({ message: 'Order not create', error: true });
+    }
+    
+  } catch (error) {
+    console.error('Error creating Category:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
+
+const updateProductCart = async (req, res) => {
+  try {
+    const { cart_id,quantity } = req.body;
+    const result = await sequelize.query(
+      'UPDATE cart SET quantity = ? WHERE id = ?',
+      {
+        replacements: [quantity, cart_id],
+        type: QueryTypes.UPDATE
+      }
+    );
+    res.status(200).json({ message: 'Cart update', error: false });
+  } catch (error) {
+    console.error('Error creating Category:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
+const deleteProductCart = async (req, res) => {
+  try {
+    const { cartId } = req.body;
+    if (!cartId) {
+      return res.status(400).json({ message: 'Cart ID is required', error: true });
+    }
+    const result = await sequelize.query(
+      'DELETE FROM cart WHERE id = ?',
+      {
+        replacements: [cartId],
+        type: QueryTypes.DELETE,
+      }
+    );
+    res.status(200).json({ message: 'Item deleted successfully', error: false });
+  } catch (error) {
+    console.error('Error deleting requirement:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
 
 
 module.exports = {
@@ -3457,7 +3648,7 @@ module.exports = {
   deleteRequirement,
   fetchUsersTotalCountAll,
   updateBusinessProfile,
-  saveRequirement,
+  saveProduct,
   updateRequirementStatus,
   clickSellIt,
   getClickSellIt,
@@ -3470,7 +3661,6 @@ module.exports = {
   fetchUsersForAdminPersonal,
   fetchTopUsersWithCompletedRequirements,
   updateUserToken,
-  fetchProductDetails,
   getUserToken,
   updateUserSubscription,
   getUserStory,
@@ -3483,5 +3673,13 @@ module.exports = {
   getUserStorybyId,
   getHomeData,
   getProductBySubCategory,
-  getProductDetails
+  getProductDetails,
+  addProductCart,
+  fetchCartItems,
+  updateProductCart,
+  deleteProductCart,
+  addUserAddress,
+  fetchUserAddress,
+  fetchUserAllAddress,
+  createOrder
 };

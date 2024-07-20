@@ -5,31 +5,38 @@ const { verifyToken } = require("../middlewares/roleMiddleware");
 
 const {createAge,
     getSubCategories,
-    fetchProductDetails,
     createBarand,
     getAllAge,
     getAllBrand,
-    getProduct,UserLogin,
+    getProduct,UserLogin,addUserAddress,fetchUserAddress,fetchUserAllAddress,createOrder,updateProductCart,deleteProductCart,
     fetchSubCategories,createSubCategory,getAllCategories,createCategory, deleteImageProductService ,deleteImage ,updateProductService, updateRequirement,updateUserName, updateGroupName, updateUserPersonalProfile, getUserPlan, verifyBusinessProfile, verifyStory, fetchTopUsersWithCompletedRequirements, fetchUsersTotalCountAll, updateUserSubscription,getUserStory,createStory,fetchUserProfile, fetchUserRequirementsLetter, fetchUsersForAdminPersonal, getSavedRequirements, markMessagesAsSeen, updateUserToken,
-    getUserToken,getUserStorybyId,getHomeData,getProductBySubCategory,getProductDetails,
-    getRoomUserToken,fetchRequirementDetails,fetchUserRequirements, fetchUsersForAdmin, loginUserAdmin, getClickSellIt,saveRequirement,clickSellIt, getMessages, sendMessage, registerUser,updateUserProfile, loginUser,updateUserType,createUserProfile,createBusinessProfile,sendMessageRoom,getMessagesSenderRoom,getMessagesRoom, findRoomByUserId, getUserProfile, getImage, OTPVerify,createRoom, sendPasswordOTP, OTPVerifyEmail, updatepassword,createRequirement,
+    getUserToken,getUserStorybyId,getHomeData,getProductBySubCategory,getProductDetails,addProductCart,fetchCartItems,
+    getRoomUserToken,fetchRequirementDetails,fetchUserRequirements, fetchUsersForAdmin, loginUserAdmin, getClickSellIt,saveProduct,clickSellIt, getMessages, sendMessage, registerUser,updateUserProfile, loginUser,updateUserType,createUserProfile,createBusinessProfile,sendMessageRoom,getMessagesSenderRoom,getMessagesRoom, findRoomByUserId, getUserProfile, getImage, OTPVerify,createRoom, sendPasswordOTP, OTPVerifyEmail, updatepassword,createRequirement,
     getAllUsers,getAllUserRequirementsUserFollo,getAllUsersIfFollow,getAllUserRequirements,getPersonalProfile,getBusinessProfile,sendFollowRequest,getFollowRequest,updateRequestStatus,getFollowAllUsers,
     createProduct,getAllUserPrductService,deleteRequirement,updateBusinessProfile,updateRequirementStatus } = userController; 
 
+// admin api 
 
 router.post('/users/loginUserAdmin', loginUserAdmin);
-router.post('/users/fetchProductDetails', fetchProductDetails);
 router.post('/users/createAge', createAge);
 router.post('/users/getSubCategories', getSubCategories);
 router.post('/users/createBarand', createBarand);
 router.get('/users/getAllAge', getAllAge);
 router.get('/users/getAllBrand', getAllBrand);
 router.get('/users/fetchSubCategories', fetchSubCategories);
+router.post('/users/updateProductCart', updateProductCart);
+router.post('/users/deleteProductCart', deleteProductCart);
+router.post('/users/addUserAddress', addUserAddress);
+router.post('/users/fetchUserAddress', fetchUserAddress);
+router.post('/users/fetchUserAllAddress', fetchUserAllAddress);
+router.post('/users/createOrder', createOrder);
 router.get('/users/getProduct', getProduct);
 router.get('/users/getAllCategories', getAllCategories);
-router.get('/users/getHomeData', getHomeData);
+router.post('/users/getHomeData', getHomeData);
 router.post('/users/getProductBySubCategory', getProductBySubCategory);
 router.post('/users/getProductDetails', getProductDetails);
+router.post('/users/addProductCart', addProductCart);
+router.post('/users/fetchCartItems', fetchCartItems);
 
 router.get('/users/fetchUsersForAdmin', fetchUsersForAdmin);
 router.get('/users/fetchTopUsersWithCompletedRequirements', fetchTopUsersWithCompletedRequirements);
@@ -67,7 +74,7 @@ router.post('/users/getRoomToken', getRoomUserToken);
 
 router.post('/users/sendMessage', sendMessage);
 router.post('/users/getMessages', getMessages);
-router.post('/users/saveRequirement', saveRequirement);
+router.post('/users/saveProduct', saveProduct);
 router.post('/users/clickSellIt', clickSellIt);
 router.post('/users/getClickSellIt', getClickSellIt);
 router.post('/users/sendMessageRoom', sendMessageRoom);
