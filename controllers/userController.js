@@ -4,6 +4,9 @@ const { QueryTypes } = require('sequelize');
 const jwt = require('jsonwebtoken');
 const verifyToken = require('../middlewares/authMiddleware');
 const fs = require('fs');
+const puppeteer = require('puppeteer');
+const axios = require('axios');
+
 const path = require('path');
 
 const otpGenerator = require('otp-generator');
@@ -3059,18 +3062,122 @@ const addProductCart = async (req, res) => {
   }
 };
 
+// const fetchCartItems = async (req, res) => {
+//   try {
+//     const { user_id } = req.body;
+
+//     console.log(`Fetching product IDs for user_id: ${user_id}`);
+
+//     // Fetch product IDs for the user from the cart
+//     const productIdsResult = await sequelize.query(
+//       'SELECT product_id FROM cart WHERE user_id = ?',
+//       { replacements: [user_id], type: QueryTypes.SELECT }
+//     );
+
+//     // Extract product IDs into an array
+//     const productIds = productIdsResult.map(item => item.product_id);
+
+//     // Log the fetched product IDs
+//     console.log('Product IDs:', productIds);
+
+//     res.status(200).json({
+//       error: false,
+//       message: "Product IDs fetched successfully",
+//       productIds,
+//     });
+//   } catch (error) {
+//     console.error('Error fetching product IDs:', error);
+//     res.status(500).json({ message: 'Internal server error', error: true });
+//   }
+// };
+
+
+// const fetchCartItems = async (req, res) => {
+//   try {
+//     const { user_id } = req.body;
+
+//     console.log(`Fetching cart items for user_id: ${user_id}`);
+
+//     // Fetch cart items for the user
+//     const UserCartResult = await sequelize.query(
+//       'SELECT * FROM cart WHERE user_id = ?',
+//       { replacements: [user_id], type: QueryTypes.SELECT }
+//     );
+
+//     // Ensure UserCart is always an array
+//     const UserCart = Array.isArray(UserCartResult) ? UserCartResult : [UserCartResult];
+
+//     // Log the fetched cart items
+//     console.log('UserCart:', UserCart);
+
+//     if (UserCart.length === 0) {
+//       return res.status(200).json({
+//         error: false,
+//         message: "No items in the cart",
+//         CartDetails: [],
+//       });
+//     }
+
+//     // Fetch all products in parallel
+//     const productPromises = UserCart.map(async (cart) => {
+//       const productResult = await sequelize.query(
+//         'SELECT * FROM products WHERE id = ?',
+//         {
+//           replacements: [cart.product_id],
+//           type: QueryTypes.SELECT
+//         }
+//       );
+
+//       for (const product of productResult) {
+//         const images = await sequelize.query(
+//           'SELECT image FROM images WHERE product_id = ? AND type = ?',
+//           {
+//             replacements: [product.id, "product"],
+//             type: QueryTypes.SELECT
+//           }
+//         );
+//         // Map the images to the product
+//         product.images = images.map(img => img.image); // Use the correct field name
+//       }
+
+//       // Ensure products is always an array
+//       const products = Array.isArray(productResult) ? productResult : [productResult];
+
+//       // Log the fetched products for each cart item
+//       console.log(`Products for cart item ${cart.product_id}:`, products);
+
+//       cart.products = products;
+//       return cart;
+//     });
+
+//     const updatedCart = await Promise.all(productPromises);
+
+//     // Return the updated cart details
+//     res.status(200).json({
+//       error: false,
+//       message: "Data Fetch",
+//       CartDetails: updatedCart,
+//     });
+//   } catch (error) {
+//     console.error('Error fetching cart items:', error);
+//     res.status(500).json({ message: 'Internal server error', error: true });
+//   }
+// };
+
+
 const fetchCartItems = async (req, res) => {
   try {
-    const { user_id } = req.body;
-    
+    const { user_id } = req.body; 
+
     console.log(`Fetching cart items for user_id: ${user_id}`);
 
+    // Fetch cart items for the user
     const UserCartResult = await sequelize.query(
       'SELECT * FROM cart WHERE user_id = ?',
       { replacements: [user_id], type: QueryTypes.SELECT }
     );
 
-    // Check if the result is an array or a single object
+    // Ensure UserCart is always an array
     const UserCart = Array.isArray(UserCartResult) ? UserCartResult : [UserCartResult];
 
     // Log the fetched cart items
@@ -3084,44 +3191,40 @@ const fetchCartItems = async (req, res) => {
       });
     }
 
-    // Fetch all products in parallel
+    // WooCommerce API credentials
+    const wooUsername = 'ck_56ffdaea4a26ffc13bdde4c637ff9efc42f7719e';
+    const wooPassword = 'cs_461b129731f4b0235ee4400bd9829168c7d89b32';
+    const wooBaseUrl = 'https://www.uttamtoys.com/wp-json/wc/v3/products';
+
+    // Fetch all products in parallel from WooCommerce API
     const productPromises = UserCart.map(async (cart) => {
-      const productResult = await sequelize.query(
-        'SELECT * FROM products WHERE id = ?',
-        {
-          replacements: [cart.product_id],
-          type: QueryTypes.SELECT
+      const productResponse = await axios.get(`${wooBaseUrl}/${cart.product_id}`, {
+        auth: {
+          username: wooUsername,
+          password: wooPassword
         }
-      );
+      });
 
-      for (const product of productResult) {
-        const images = await sequelize.query(
-          'SELECT image FROM images WHERE product_id = ? AND type = ?',
-          {
-            replacements: [product.id, "product"],
-            type: QueryTypes.SELECT
-          }
-        );
-        // Map the images to the product
-        product.images = images.map(img => img.image); // Use the correct field name
-      }
-
-      // Check if the result is an array or a single object
-      const products = Array.isArray(productResult) ? productResult : [productResult];
-
-      // Log the fetched products for each cart item
-      console.log(`Products for cart item ${cart.product_id}:`, products);
-
-      cart.products = products;
-      return cart;
+      // Return the product details
+      return productResponse.data;
     });
 
-    const updatedCart = await Promise.all(productPromises);
+    const products = await Promise.all(productPromises);
+    console.log('products:', products);
 
+    // Combine products with the UserCart items
+    const updatedUserCart = UserCart.map((cartItem, index) => {
+      return {
+        ...cartItem,
+        product: products[index]
+      };
+    });
+
+    // Return the updated cart details
     res.status(200).json({
       error: false,
       message: "Data Fetch",
-      CartDetails: updatedCart,
+      UserCart: updatedUserCart,
     });
   } catch (error) {
     console.error('Error fetching cart items:', error);
@@ -3389,6 +3492,73 @@ const getSubCategories = async (req, res) => {
   }
 };
 
+const fetchSaveItems = async (req, res) => {
+  try {
+    const { user_id } = req.body; 
+
+    console.log(`Fetching Save items for user_id: ${user_id}`);
+
+    // Fetch cart items for the user
+    const UserCartResult = await sequelize.query(
+      'SELECT * FROM wishlist WHERE user_id = ?',
+      { replacements: [user_id], type: QueryTypes.SELECT }
+    );
+
+    // Ensure UserCart is always an array
+    const UserCart = Array.isArray(UserCartResult) ? UserCartResult : [UserCartResult];
+
+    // Log the fetched cart items
+    console.log('UserSave:', UserCart);
+
+    if (UserCart.length === 0) {
+      return res.status(200).json({
+        error: false,
+        message: "No items in the cart",
+        CartDetails: [],
+      });
+    }
+
+    // WooCommerce API credentials
+    const wooUsername = 'ck_56ffdaea4a26ffc13bdde4c637ff9efc42f7719e';
+    const wooPassword = 'cs_461b129731f4b0235ee4400bd9829168c7d89b32';
+    const wooBaseUrl = 'https://www.uttamtoys.com/wp-json/wc/v3/products';
+
+    // Fetch all products in parallel from WooCommerce API
+    const productPromises = UserCart.map(async (cart) => {
+      const productResponse = await axios.get(`${wooBaseUrl}/${cart.product_id}`, {
+        auth: {
+          username: wooUsername,
+          password: wooPassword
+        }
+      });
+
+      // Return the product details
+      return productResponse.data;
+    });
+
+    const products = await Promise.all(productPromises);
+    console.log('products:', products);
+
+    // Combine products with the UserCart items
+    const updatedUserCart = UserCart.map((cartItem, index) => {
+      return {
+        ...cartItem,
+        product: products[index]
+      };
+    });
+
+    // Return the updated cart details
+    res.status(200).json({
+      error: false,
+      message: "Data Fetch",
+      UserCart: updatedUserCart,
+    });
+  } catch (error) {
+    console.error('Error fetching cart items:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
+
 
 const saveProduct = async (req, res) => {
   try {
@@ -3445,14 +3615,15 @@ const saveProduct = async (req, res) => {
 
 const addUserAddress = async (req, res) => {
   try {
-    const { address_line_1, address_line_2,state,city,pincode,landmark,user_id,type } = req.body;
+    const { address_line_1, address_line_2,state,city,pincode,landmark,user_id,type,mobile } = req.body;
+    console.log(req.body);
     const [existingUserAddress] = await sequelize.query('SELECT * FROM address WHERE user_id = ? AND type = ?',
       { replacements: [user_id,type], type: QueryTypes.SELECT });
     if (!existingUserAddress) {
       const result = await sequelize.query(
-        'INSERT INTO address (address_line_1, address_line_2,state,city,pincode,landmark,user_id,type) VALUES (?,?,?,?,?,?,?,?)',
+        'INSERT INTO address (address_line_1, address_line_2,state,city,pincode,landmark,user_id,type,mobile) VALUES (?,?,?,?,?,?,?,?,?)',
         {
-          replacements: [address_line_1, address_line_2,state,city,pincode,landmark,user_id,type],
+          replacements: [address_line_1, address_line_2,state,city,pincode,landmark,user_id,type,mobile],
           type: QueryTypes.INSERT
         }
       );
@@ -3464,13 +3635,13 @@ const addUserAddress = async (req, res) => {
       }
     } else {
       const result = await sequelize.query(
-        'UPDATE address SET address_line_1 = ?,address_line_2 = ?,state = ?,city = ?,pincode = ?,landmark = ? WHERE user_id = ? AND type = ?',
+        'UPDATE address SET address_line_1 = ?,address_line_2 = ?,state = ?,city = ?,pincode = ?,landmark = ?,mobile = ? WHERE user_id = ? AND type = ?',
         {
-          replacements: [address_line_1, address_line_2,state,city,pincode,landmark,user_id,type],
+          replacements: [address_line_1, address_line_2,state,city,pincode,landmark,mobile,user_id,type],
           type: QueryTypes.UPDATE
         }
       );
-  
+      console.log(result);
       res.status(200).json({ message: 'Address update', error: false });
     }
     
@@ -3593,6 +3764,100 @@ const deleteProductCart = async (req, res) => {
 };
 
 
+const fetchProductDetails = async (req, res) => {
+  try {
+    const { url } = req.body;
+
+    if (!url) {
+      return res.status(400).json({ message: 'URL is required', error: true });
+    }
+
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
+    await page.goto(url, { waitUntil: 'networkidle2' });
+
+    const title = await page.$eval('#productTitle', el => el.textContent.trim()).catch(() => null);
+
+    // Try different selectors for the price element
+    const priceSelectors = ['#priceblock_ourprice', '#priceblock_dealprice', '.a-price .a-offscreen'];
+    let main_price = null;
+    for (let selector of priceSelectors) {
+      try {
+        main_price = await page.$eval(selector, el => el.textContent.trim());
+        if (main_price) break;
+      } catch (error) {
+        main_price = null;
+      }
+    }
+
+    // Example selectors for technical details
+    const technicalDetails = {
+      technicalDetail: await page.$eval('#productDetails_techSpec_section_1', el => el.textContent.trim()).catch(() => null),
+      // Add more properties as needed
+    };
+
+    // Example selectors, need to be adjusted based on the actual website structure
+    const category_id = await page.$eval('#category_id', el => el.textContent.trim()).catch(() => null);
+    const sub_category_id = await page.$eval('#sub_category_id', el => el.textContent.trim()).catch(() => null);
+    const brand_id = await page.$eval('#bylineInfo', el => el.textContent.trim()).catch(() => null);
+    const description_short = await page.$eval('#productDescription p span', el => el.textContent.trim()).catch(() => null);
+    const description_long = await page.$eval('#feature-bullets', el => el.textContent.trim()).catch(() => null);
+    const discount_price = await page.$eval('#discount_price', el => el.textContent.trim()).catch(() => null);
+    const sku = await page.$eval('#sku', el => el.textContent.trim()).catch(() => null);
+    const tax_value = await page.$eval('#tax_value', el => el.textContent.trim()).catch(() => null);
+    const tags = await page.$$eval('.tags', el => el.map(tag => tag.textContent.trim())).catch(() => null);
+    const age = await page.$eval('#age', el => el.textContent.trim()).catch(() => null);
+
+    const images = await page.$$eval('#altImages img', imgs => imgs.map(img => img.src)).catch(() => null);
+
+    await browser.close();
+
+    res.status(200).json({ 
+      product: { 
+        title, 
+        category_id,
+        sub_category_id,
+        brand_id,
+        description_short,
+        description_long,
+        main_price,
+        discount_price,
+        sku,
+        tax_value,
+        tags,
+        age,
+        images,
+        ...technicalDetails  // Include technical details in the response
+      }, 
+      error: false 
+    });
+  } catch (error) {
+    console.error('Error fetching product details:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
+
+
+const deleteProductFromCart = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) {
+      return res.status(400).json({ message: 'User ID is required', error: true });
+    }
+    const result = await sequelize.query(
+      'DELETE FROM cart WHERE user_id = ?',
+      {
+        replacements: [userId],
+        type: QueryTypes.DELETE,
+      }
+    );
+    res.status(200).json({ message: 'Item deleted successfully', error: false });
+  } catch (error) {
+    console.error('Error deleting requirement:', error);
+    res.status(500).json({ message: 'Internal server error', error: true });
+  }
+};
+
 module.exports = {
   registerUser,
   getMessagesSenderRoom,
@@ -3642,6 +3907,7 @@ module.exports = {
   updateRequestStatus,
   updateProductService,
   getFollowAllUsers,
+  fetchProductDetails,
   getAllUserRequirementsUserFollo,
   createProduct,
   getAllUserPrductService,
@@ -3676,10 +3942,12 @@ module.exports = {
   getProductDetails,
   addProductCart,
   fetchCartItems,
+  fetchSaveItems,
   updateProductCart,
   deleteProductCart,
   addUserAddress,
   fetchUserAddress,
   fetchUserAllAddress,
-  createOrder
+  createOrder,
+  deleteProductFromCart
 };

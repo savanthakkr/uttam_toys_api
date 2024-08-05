@@ -7,8 +7,10 @@ const {createAge,
     getSubCategories,
     createBarand,
     getAllAge,
+    fetchProductDetails,
     getAllBrand,
-    getProduct,UserLogin,addUserAddress,fetchUserAddress,fetchUserAllAddress,createOrder,updateProductCart,deleteProductCart,
+    fetchSaveItems,
+    getProduct,UserLogin,addUserAddress,fetchUserAddress,fetchUserAllAddress,createOrder,updateProductCart,deleteProductCart,deleteProductFromCart,
     fetchSubCategories,createSubCategory,getAllCategories,createCategory, deleteImageProductService ,deleteImage ,updateProductService, updateRequirement,updateUserName, updateGroupName, updateUserPersonalProfile, getUserPlan, verifyBusinessProfile, verifyStory, fetchTopUsersWithCompletedRequirements, fetchUsersTotalCountAll, updateUserSubscription,getUserStory,createStory,fetchUserProfile, fetchUserRequirementsLetter, fetchUsersForAdminPersonal, getSavedRequirements, markMessagesAsSeen, updateUserToken,
     getUserToken,getUserStorybyId,getHomeData,getProductBySubCategory,getProductDetails,addProductCart,fetchCartItems,
     getRoomUserToken,fetchRequirementDetails,fetchUserRequirements, fetchUsersForAdmin, loginUserAdmin, getClickSellIt,saveProduct,clickSellIt, getMessages, sendMessage, registerUser,updateUserProfile, loginUser,updateUserType,createUserProfile,createBusinessProfile,sendMessageRoom,getMessagesSenderRoom,getMessagesRoom, findRoomByUserId, getUserProfile, getImage, OTPVerify,createRoom, sendPasswordOTP, OTPVerifyEmail, updatepassword,createRequirement,
@@ -18,7 +20,9 @@ const {createAge,
 // admin api 
 
 router.post('/users/loginUserAdmin', loginUserAdmin);
+router.post('/users/fetchProductDetails', fetchProductDetails);
 router.post('/users/createAge', createAge);
+router.post('/users/deleteProductFromCart', deleteProductFromCart);
 router.post('/users/getSubCategories', getSubCategories);
 router.post('/users/createBarand', createBarand);
 router.get('/users/getAllAge', getAllAge);
@@ -37,6 +41,7 @@ router.post('/users/getProductBySubCategory', getProductBySubCategory);
 router.post('/users/getProductDetails', getProductDetails);
 router.post('/users/addProductCart', addProductCart);
 router.post('/users/fetchCartItems', fetchCartItems);
+router.post('/users/fetchSaveItems', fetchSaveItems);
 
 router.get('/users/fetchUsersForAdmin', fetchUsersForAdmin);
 router.get('/users/fetchTopUsersWithCompletedRequirements', fetchTopUsersWithCompletedRequirements);
