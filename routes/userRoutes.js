@@ -8,6 +8,7 @@ const {createAge,
     createBarand,
     getAllAge,
     fetchProductDetails,
+    fetchStockData,
     getAllBrand,
     fetchSaveItems,
     getProduct,UserLogin,addUserAddress,fetchUserAddress,fetchUserAllAddress,createOrder,updateProductCart,deleteProductCart,deleteProductFromCart,
@@ -20,6 +21,7 @@ const {createAge,
 // admin api 
 
 router.post('/users/loginUserAdmin', loginUserAdmin);
+router.post('/users/fetchStockData', fetchStockData);
 router.post('/users/fetchProductDetails', fetchProductDetails);
 router.post('/users/createAge', createAge);
 router.post('/users/deleteProductFromCart', deleteProductFromCart);

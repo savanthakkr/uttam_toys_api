@@ -15,10 +15,10 @@ require('dotenv').config();
 // });
 
 // Replace these values with your actual database credentials
-const DB_NAME = 'uttam_toys';
-const DB_USER = 'root';
-const DB_PASSWORD = '';
-const DB_HOST = 'localhost';
+const DB_NAME = 'bmgf5jemd29cumrpew82';
+const DB_USER = 'ucd1axin7gxhirzt';
+const DB_PASSWORD = 'SA2APblDmP4CKP6MZRU5';
+const DB_HOST = 'bmgf5jemd29cumrpew82-mysql.services.clever-cloud.com';
 
 // Set up the Sequelize instance
 const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASSWORD, {
