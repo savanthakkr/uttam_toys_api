@@ -3857,59 +3857,9 @@ const deleteProductFromCart = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error: true });
   }
 };
-const API_KEY = '4726e653687b45d4904086ab3484c1ee';
-
-const fetchStockData = async (req, res) => {
-  try {
-    const { stockName } = req.body;
-
-    if (!stockName) {
-      return res.status(400).json({ message: 'Stock name is required', error: true });
-    }
-
-    // Search for stock symbol
-    const searchURL = `https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords=${stockName}&apikey=${API_KEY}`;
-    const searchResponse = await axios.get(searchURL);
-    const matches = searchResponse.data.bestMatches.filter(stock => stock['4. region'].toLowerCase().includes('india'));
-
-    if (matches.length === 0) {
-      return res.status(404).json({ message: 'Indian stock not found', error: true });
-    }
-
-    const stockSymbol = matches[0]['1. symbol'];
-
-    // Fetch technical indicators
-    const technicalURL = `https://www.alphavantage.co/query?function=SMA&symbol=${stockSymbol}&interval=daily&time_period=10&series_type=close&apikey=${API_KEY}`;
-    const technicalResponse = await axios.get(technicalURL);
-
-    // Fetch income statement
-    const incomeURL = `https://www.alphavantage.co/query?function=INCOME_STATEMENT&symbol=${stockSymbol}&apikey=${API_KEY}`;
-    const incomeResponse = await axios.get(incomeURL);
-
-    // Fetch balance sheet
-    const balanceSheetURL = `https://www.alphavantage.co/query?function=BALANCE_SHEET&symbol=${stockSymbol}&apikey=${API_KEY}`;
-    const balanceSheetResponse = await axios.get(balanceSheetURL);
-
-    // Fetch cash flow
-    const cashFlowURL = `https://www.alphavantage.co/query?function=CASH_FLOW&symbol=${stockSymbol}&apikey=${API_KEY}`;
-    const cashFlowResponse = await axios.get(cashFlowURL);
-
-    return res.status(200).json({
-      technical: technicalResponse.data,
-      income: incomeResponse.data,
-      balanceSheet: balanceSheetResponse.data,
-      cashFlow: cashFlowResponse.data,
-      error: false
-    });
-  } catch (error) {
-    console.error('Error fetching stock data:', error);
-    return res.status(500).json({ message: 'Internal server error', error: true });
-  }
-};
 
 module.exports = {
   registerUser,
-  fetchStockData,
   getMessagesSenderRoom,
   createAge,
   createBarand,
